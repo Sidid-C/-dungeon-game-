@@ -1,0 +1,7 @@
+This is a map of sewanee. Use it to know what locations are available to you and know where to go. 
+abbos alley 
+johnson hall 
+all saints 
+walsh elliot (vice chancellors office) 
+correct syntax would be: go all saints 
+hint: the vice chancellor is all knowing. Go there if you need to know the order of where to go
