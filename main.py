@@ -69,7 +69,7 @@ class Game:
         
         
         ATO = Room('Frat house', story('Monologue.txt'))
-        past_ATO = Room('past frat house', story('futureATO.txt'), enter_sound= 'go past')
+        past_ATO = Room('past frat house', story('FutureATO.txt'), enter_sound= 'go past')
         Abbos_alley = Room('abbos alley', 'You are in Abbos alley') 
         Gailor = Room('gailor', 'You are in Gailor') 
         Dupont_libary = Room('dupont libary', 'You are in Dupont libary ') 
