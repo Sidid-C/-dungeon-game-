@@ -281,7 +281,7 @@ class Game:
         if self.pending: 
              self.say(self.pending.pop(0))
              if self.score >= 100 and not self.pending:
-                self.say('YOU WIN THE GAME')
+                self.say('You made it home CONGRADULATIONS!!! And you will never visit the ATO house again.')
                 self.game_over = True
              return  
         self.say(f'> {line}')
