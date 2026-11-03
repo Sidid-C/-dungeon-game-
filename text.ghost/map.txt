@@ -3,5 +3,6 @@ abbos alley
 johnson hall 
 all saints 
 walsh elliot (vice chancellors office) 
-correct syntax would be: go all saints 
-hint: the vice chancellor is all knowing. Go there if you need to know the order of where to go
+hint: the vice chancellor is all knowing. Go there to know how to get back to the present.
+Abbos alley connects all locations together and following your talk with the vice 
+chancellor head to johnson to find weapons. 
