@@ -1,5 +1,5 @@
 # Sidi Cisse 
-
+# add a use input and figure out how to implement additional text add to existing text if necessary
 
 import asyncio               
 from pathlib import Path
@@ -26,23 +26,36 @@ class Treasure:
         self.name = name 
         self.description = description 
         self.value = value  
+        
+class Interactive: 
+    def __init__(self, name, description, follow_up=None): 
+        self.name = name 
+        self.description = description 
+        self.follow_up = follow_up or []
 
+class Character: 
+     def __init__(self, name, description): 
+          self.name = name 
+          self.description = description 
 
 class Weapon: 
     def __init__(self, name, damage, description): 
         self.name = name 
         self.damage = damage 
-        self.description = description 
-
+        self.description = description
+    
 
 class Room: 
-    def __init__(self, name, description, enter_sound=None): 
+    def __init__(self, name, description, enter_sound=None, follow_up=None): 
         self.name = name 
         self.description = description 
         self.enter_sound = enter_sound 
         self.neighbors = {} 
+        self.follow_up = follow_up or [] 
+        self.interactive = None  
         self.monster = None  
         self.treasure = None
+        self.character = None
         self.weapon = None  
 
     def add_neighbor(self, destination, room): 
@@ -59,7 +72,10 @@ class Game:
     def __init__(self): 
         self.messages = []
         self.current_input = '' 
-        self.score = 0 
+        self.score = 0  
+        self.active = None
+        self.step = 0  
+        self.pending = []
         self.best_weapon_damage = 1
         self.game_over = False 
         self.sounds = { 
@@ -69,15 +85,19 @@ class Game:
         
         
         ATO = Room('Frat house', story('Monologue.txt'))
-        past_ATO = Room('past frat house', story('FutureATO.txt'), enter_sound= 'go past')
+        past_ATO = Room('past frat house', story('PastATO.txt'), enter_sound= 'go past', 
+                        follow_up= [story('PastATOfollowup.txt')])
         Abbos_alley = Room('abbos alley', 'You are in Abbos alley') 
         Gailor = Room('gailor', 'You are in Gailor') 
         Dupont_library = Room('dupont library', 'You are in Dupont library ') 
-        All_saints_Church = Room('all saints', 'You are in All saints') 
-        Johnson = Room('johnson hall', 'You are in Johnson') 
-        Walsh_elliot = Room('walsh elliot', 'You are in Walsh elliot') 
-        The_forest = Room('the forest', 'You are in the forest')
-
+        All_saints_Church = Room('all saints', story('allsaints.txt')) 
+        Johnson = Room('johnson hall', story('johnson.txt'), 
+                       follow_up= [story ('johnsonFollowup.txt')]) 
+        Walsh_elliot = Room('walsh elliot', story('Walshelliot.txt'), 
+                            follow_up= [story('WalshelliotFollowup.txt')]) 
+        Walsh_elliot_office = Room('vice chancellors office', story('office.txt'))
+        The_forest = Room('the forest', story('theforest.txt'))
+ 
         ATO.add_neighbor('past', past_ATO)
         past_ATO.add_neighbor('future ato', ATO)
         past_ATO.add_neighbor('abbos alley', Abbos_alley) 
@@ -87,29 +107,30 @@ class Game:
         Abbos_alley.add_neighbor('johnson hall', Johnson)
         Abbos_alley.add_neighbor('walsh elliot', Walsh_elliot)
         Abbos_alley.add_neighbor('the forest', The_forest) 
-        Johnson.add_neighbor('gailor', Gailor)
-        Johnson.add_neighbor('dupont library', Dupont_library)
-        Gailor.add_neighbor('johnson hall', Johnson)
-        Gailor.add_neighbor('abbos alley', Abbos_alley) 
-        All_saints_Church.add_neighbor('abbos alley', Abbos_alley) 
-        Dupont_library.add_neighbor('abbos alley', Abbos_alley) 
-        Dupont_library.add_neighbor('johnson hall', Johnson)
-        Walsh_elliot.add_neighbor('abbos alley', Abbos_alley) 
-        Walsh_elliot.add_neighbor('the forest', The_forest)
-        The_forest.add_neighbor('abbos alley', Abbos_alley) 
-        The_forest.add_neighbor('future ato', ATO) 
-
+        Walsh_elliot.add_neighbor('vice chancellors office', Walsh_elliot_office)
+        Walsh_elliot_office.add_neighbor('abbos alley', Abbos_alley)
+        Johnson.add_neighbor('all saints', All_saints_Church)
+        All_saints_Church.add_neighbor('the forest', The_forest)
 
         past_ATO.treasure = (Treasure('newspaper', 2, story('newspaper.txt')))
         Abbos_alley.treasure = (Treasure('map', 2, story('map.txt')))
-        
-        
+        All_saints_Church.treasure = (Treasure('holywater', 20, story('holywater.txt')))
+
+        The_forest.monster = (Monster('skinwalker', 5, story('skinwalker.txt')))
+
+        Johnson.weapon = (Weapon('rifle', 10, story('rifle.txt')))
+
+        The_forest = (Interactive('trampoline', 60, story('jump1.txt'), 
+                                  follow_up= [story('jump2.txt'), story('jump3.txt')]))
+
+        Walsh_elliot_office.character = (Character('vice chancellor', story('vicechancellor.txt',)))
         
          
         self.current_room = ATO 
         self.say('Welcome this is ATO.')
-        self.say('To get started enter start and valid commands throughout the game \n' 
-        'include: attack, grab, go, look, and talk. For additional help enter help. ')
+        self.say('''To get started enter start and valid commands throughout the game  
+         include: attack, grab, go, look, and talk. For additional help enter help. 
+         to use treasure you pick up enter the name. You may use map, and newspaper.''')
 
 
     
@@ -119,14 +140,39 @@ class Game:
 
     def newspaper(self):
          self.say(story('newspaper.txt'))
+
+    def use(self, name): 
+         obj = self.current_room.interactive
+         if obj is not None and obj.name == name:
+              self.say(obj.description)
+              if obj.follow_up:
+                   self.pending = list(obj.follow_up)
+                   self.say('(Press enter to jump...)')
+                   if obj.value > 0:
+                       self.score += obj.value
+                       obj.value = 0
+                       self.say(f'Your score is now {self.score} out of 100')
+                   if obj.follow_up:
+                    self.pending = list(obj.follow_up)
+                    self.say('(Press enter to jump...)')
+                   if self.score >= 100:
+                    self.say('YOU WIN THE GAME')
+                    self.game_over = True
+         else:
+            self.say(f'There is no {name} here')
+            
     
     def map(self): 
         self.say(f'Your current location is: {self.current_room.name}')
         self.say(story('map.txt'))
+
     
     def announce_room(self):
         self.say(f'You are in: {self.current_room.name}') 
         self.say(self.current_room.description)
+        if self.current_room.follow_up:
+             self.pending = list(self.current_room.follow_up)
+             self.say('(Press enter to continue...)')
     
     def play_sound(self, name): 
         if name in self.sounds: 
@@ -157,13 +203,28 @@ class Game:
         if monster is not None and monster.name == name: 
             if self.best_weapon_damage > monster.armor: 
                 self.say('You successfully exorsized it!')
+                self.say(monster.description)
+                self.current_room.monster = None
             else: 
                  self.say('Your attack did nothing.')
                  self.say(f'The {monster.name} violently ate you in one gulp')
                  self.say('YOU LOST')
-                 self.game_over = True
+                 self.game_over = True 
         else: 
             self.say('Youre safe nothing is here')
+
+    def run(self): 
+         monster = self.current_room.monster 
+         if monster is not None: 
+              self.say(monster.description)
+   
+    def talk(self, name): 
+         character = self.current_room.character
+         if character is not None and character.name == name: 
+            self.say(self.current_room.character.description)
+         else: 
+              self.say('There is no human here but you')
+         
 
     def grab(self,name):
          treasure = self.current_room.treasure
@@ -177,6 +238,7 @@ class Game:
                    self.game_over = True 
          elif weapon is not None and weapon.name == name:
               self.current_room.weapon = None 
+              self.say(weapon.description)
               if weapon.damage > self.best_weapon_damage: 
                     self.best_weapon_damage = weapon.damage 
                     self.say('You can defeat stronger foes with this')
@@ -188,18 +250,28 @@ class Game:
     def look(self): 
         self.say(f'You are in {self.current_room.name}')
         if self.current_room.monster is not None: 
-            self.say(f'There is {self.current_room.monster.description} here')
+            self.say(f'There is {self.current_room.monster.name} here')
         if self.current_room.treasure is not None: 
             self.say(f'There is a {self.current_room.treasure.name} here') 
+        if self.current_room.character is not None: 
+            self.say(f'There is someone named {self.current_room.character.name} here')
         if self.current_room.weapon is not None: 
-            self.say(f'There is {self.current_room.weapon.description} here')
+            self.say(f'There is {self.current_room.weapon.name} here')
         self.say(f'Exits: {self.current_room.list_exits()}')
-       
-    def talk(self): 
-        ()
-        
     
     def handle_command(self, line):
+        if self.pending: 
+             self.say(self.pending.pop(0))
+             return 
+        if self.active: 
+             if line.lower().strip() == 'stop':
+              self.say(f'You step off the {self.active.name}.')
+              self.active = None
+             else: 
+              responses = self.active.responses
+              self.say(responses[self.step % len(responses)])
+              self.step += 1
+             return 
         self.say(f'> {line}')
         words = line.lower().split() 
         if not words: 
@@ -212,14 +284,22 @@ class Game:
             self.go(' '.join(words[1:]))
         elif command == 'help':
             self.help()
+        elif command == 'use' and len(words) > 1:
+             self.use(' '.join(words[1:]))
         elif command == 'look': 
             self.look()
         elif command == 'map':
             self.map() 
         elif command == 'newspaper':
              self.newspaper()
+        elif command == 'talk' and len(words) > 1: 
+             self.talk(' '.join(words[1:]))
         elif command == 'grab' and len(words) > 1: 
-             self.grab(words[1])
+             self.grab(''.join(words[1:]))
+        elif command == 'attack' and len(words) > 1:
+             self.attack(''.join(words[1:])) 
+        elif command == 'run': 
+             self.run()
         else:
             self.say('I dont understand that. Enter help for more information. ') 
             return 
@@ -230,7 +310,8 @@ def draw_game(screen, font, small_font, game):
 
     lines = []
     for message in game.messages:
-        lines.extend(wrap_text(message, small_font, WIDTH - 60))
+     for paragraph in message.split('\n'):
+        lines.extend(wrap_text(paragraph, small_font, WIDTH - 60))
     lines = lines[-20:]
 
     y = 70
