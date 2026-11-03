@@ -28,8 +28,9 @@ class Treasure:
         self.value = value  
         
 class Interactive: 
-    def __init__(self, name, description, follow_up=None): 
+    def __init__(self, name, value, description, follow_up=None): 
         self.name = name 
+        self.value = value
         self.description = description 
         self.follow_up = follow_up or []
 
@@ -117,10 +118,11 @@ class Game:
         All_saints_Church.treasure = (Treasure('holywater', 20, story('holywater.txt')))
 
         The_forest.monster = (Monster('skinwalker', 5, story('skinwalker.txt')))
+        Walsh_elliot.monster = (Monster('ghost', 5, story('ghost.txt')))
 
         Johnson.weapon = (Weapon('rifle', 10, story('rifle.txt')))
 
-        The_forest = (Interactive('trampoline', 60, story('jump1.txt'), 
+        The_forest.interactive = (Interactive('trampoline', 77, story('jump1.txt'), 
                                   follow_up= [story('jump2.txt'), story('jump3.txt')]))
 
         Walsh_elliot_office.character = (Character('vice chancellor', story('vicechancellor.txt',)))
@@ -145,19 +147,16 @@ class Game:
          obj = self.current_room.interactive
          if obj is not None and obj.name == name:
               self.say(obj.description)
-              if obj.follow_up:
-                   self.pending = list(obj.follow_up)
-                   self.say('(Press enter to jump...)')
-                   if obj.value > 0:
-                       self.score += obj.value
-                       obj.value = 0
-                       self.say(f'Your score is now {self.score} out of 100')
-                   if obj.follow_up:
-                    self.pending = list(obj.follow_up)
-                    self.say('(Press enter to jump...)')
-                   if self.score >= 100:
-                    self.say('YOU WIN THE GAME')
-                    self.game_over = True
+              if obj.value > 0:
+               self.score += obj.value
+               obj.value = 0
+               self.say(f'Your score is now {self.score} out of 100')
+               if obj.follow_up:
+                self.pending = list(obj.follow_up)
+               self.say('(Press enter to jump...)')
+               if self.score >= 100 and not self.pending:
+                self.say('YOU WIN THE GAME')
+                self.game_over = True
          else:
             self.say(f'There is no {name} here')
             
@@ -217,6 +216,7 @@ class Game:
          monster = self.current_room.monster 
          if monster is not None: 
               self.say(monster.description)
+
    
     def talk(self, name): 
          character = self.current_room.character
@@ -251,6 +251,8 @@ class Game:
         self.say(f'You are in {self.current_room.name}')
         if self.current_room.monster is not None: 
             self.say(f'There is {self.current_room.monster.name} here')
+        if self.current_room.interactive is not None: 
+            self.say(f'There is a {self.current_room.interactive.name} here')
         if self.current_room.treasure is not None: 
             self.say(f'There is a {self.current_room.treasure.name} here') 
         if self.current_room.character is not None: 
@@ -262,16 +264,7 @@ class Game:
     def handle_command(self, line):
         if self.pending: 
              self.say(self.pending.pop(0))
-             return 
-        if self.active: 
-             if line.lower().strip() == 'stop':
-              self.say(f'You step off the {self.active.name}.')
-              self.active = None
-             else: 
-              responses = self.active.responses
-              self.say(responses[self.step % len(responses)])
-              self.step += 1
-             return 
+             return  
         self.say(f'> {line}')
         words = line.lower().split() 
         if not words: 
@@ -303,7 +296,7 @@ class Game:
         else:
             self.say('I dont understand that. Enter help for more information. ') 
             return 
-             
+        
 def draw_game(screen, font, small_font, game):
     screen.fill((24, 24, 28))
     screen.blit(font.render("Ghost game", True, (235, 235, 240)), (30, 20))
@@ -321,6 +314,25 @@ def draw_game(screen, font, small_font, game):
 
     pygame.draw.line(screen, (100, 100, 110), (30, HEIGHT - 70), (WIDTH - 30, HEIGHT - 70), 2)
     screen.blit(small_font.render("> " + game.current_input, True, (255, 255, 255)), (30, HEIGHT - 50))
+
+def menu_commands(game):
+    if game.game_over:
+        return []
+
+    choices = [("Look around", "look")]
+    if game.current_room.monsters:
+        for monster in game.current_room.monsters:
+            choices.append((f"Attack {monster.name}", f"attack {monster.name}"))
+    else:
+        for name in game.current_room.neighbors:
+            choices.append((f"Go {name}", f"go {name}"))
+        for weapon in game.current_room.weapons:
+            choices.append((f"Take {weapon.name}", f"take {weapon.name}"))
+        for treasure in game.current_room.treasures:
+            choices.append((f"Take {treasure.name}", f"take {treasure.name}"))
+        for interactive in game.current_room.interactive: 
+            choices.append(f'use {interactive.name}')
+    return choices
 
 def wrap_text(text, font, max_width): 
         if not text:
