@@ -122,7 +122,7 @@ class Game:
         All_saints_Church.add_neighbor('the forest', The_forest)
 
         past_ATO.treasure = (Treasure('newspaper', 2, story('newspaper.txt')))
-        Abbos_alley.treasure = (Treasure('map', 2, story('map.txt')))
+        Abbos_alley.treasure = (Treasure('map', 10, story('map.txt')))
         
 
         The_forest.monster = (Monster('skinwalker', 5, story('skinwalker.txt')))
@@ -280,6 +280,9 @@ class Game:
     def handle_command(self, line):
         if self.pending: 
              self.say(self.pending.pop(0))
+             if self.score >= 100 and not self.pending:
+                self.say('YOU WIN THE GAME')
+                self.game_over = True
              return  
         self.say(f'> {line}')
         words = line.lower().split() 
