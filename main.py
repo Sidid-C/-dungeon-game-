@@ -1,6 +1,5 @@
 # Sidi Cisse 
-# add a use input and figure out how to implement additional text add to existing text if necessary
-# change the story make sure they cannot get to the trampoline until they make it to johnson and walsh elliot
+
 
 import asyncio               
 from pathlib import Path
@@ -13,7 +12,7 @@ TITLE_IMAGE = 'title_image.png'
 GAME_IMAGE = 'images.jpg'
 BACKGROUND = (30, 45, 55)
 PANEL_COLOR = (39, 49, 65)
-TEXT_COLOR = (200, 120, 240)
+TEXT_COLOR = (255, 0, 0)
 MUTED_COLOR = (185, 195, 205)
 ACCENT_COLOR = (244, 197, 102)
 TITLE_SIZE = 50
@@ -124,13 +123,14 @@ class Game:
         Walsh_elliot_office.add_neighbor('johnson', Johnson)
         Walsh_elliot_office.add_neighbor('abbos alley', Abbos_alley)
         Johnson.add_neighbor('all saints', All_saints_Church)
+        Johnson.add_neighbor('abbos alley', Abbos_alley)
         All_saints_Church.add_neighbor('the forest', The_forest)
 
         past_ATO.treasure = (Treasure('newspaper', 2, story('newspaper.txt')))
         Abbos_alley.treasure = (Treasure('map', 10, story('map.txt')))
         
 
-        The_forest.monster = (Monster('skinwalker', 5, story('skinwalker.txt')))
+        The_forest.monster = (Monster('skinwalker', 6, story('skinwalker.txt')))
         Walsh_elliot.monster = (Monster('ghost', 5, story('ghost.txt')))
 
         Johnson.weapon = (Weapon('rifle', 5, story('rifle.txt')))
@@ -309,16 +309,19 @@ class Game:
     def handle_command(self, line):
         if self.pending: 
              self.say(self.pending.pop(0))
-             if self.score >= 100 and not self.pending:
-                self.say('You made it home CONGRATULATIONS!!! And you will never visit the ATO house again.')
-                self.game_over = True
-             elif self.current_room == 'the forest' and self.score < 100 and not self.pending:
-                 self.say('''You did not make it home. The ghosts will slowly haunt you
-                 untill you die of craziness. Restart the game and you must go to abbos alley
-                 walsh elliot, the office in walsh elliot, johnson, all saints, then the 
-                 forest in order to get everything and win. Better luck next time''')
-             else: 
-                 ()
+
+             if not self.pending:
+                 if self.current_room.name == 'the forest' and self.score < 100:
+                     self.say('''YOU LOST. Restart the game and make sure you 
+                     collect every item in order to get back home.''')
+                     self.game_over = True 
+                 elif self.score >= 100:
+                    self.say('''By the time you finish saying R, your stomach drops as you fall through the trampoline and 
+                    slide down and tunnel underneath it. It spits you out in the basement of the old ATO house.
+                    This time all of the people are gone and you are grateful for the layers of dust you inhale 
+                    through a sigh of relief.''')
+                    self.say('You made it home CONGRADULATIONS!!! And you will never visit the ATO house again.')
+                    self.game_over = True
              return  
         self.say(f'> {line}')
         words = line.lower().split() 
@@ -352,14 +355,12 @@ class Game:
             self.say('I dont understand that. Enter help for more information. ') 
             return 
 
-def draw_title(screen, title_font, text_font, title_image):
+def draw_title(screen, text_font, title_image):
     if title_image is None:
            screen.fill(BACKGROUND)
     else:
         screen.blit(title_image, (0, 0))
-    title = title_font.render(GAME_TITLE, True, ACCENT_COLOR)
     prompt = text_font.render("Press Enter to begin", True, TEXT_COLOR)
-    screen.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 35)))
     screen.blit(prompt, prompt.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 25)))
 
 def load_background(filename):
@@ -496,7 +497,7 @@ async def main():
                     elif event.unicode and event.unicode.isprintable():
                         game.current_input += event.unicode 
         if screen_name == "title":
-            draw_title(screen, font, small_font, title_image)
+            draw_title(screen, small_font, title_image)
         else:
             draw_game(screen, font, small_font, game, selected, game_image)
         pygame.display.flip()       

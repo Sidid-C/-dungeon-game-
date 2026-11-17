@@ -3,6 +3,7 @@ abbos alley
 johnson hall 
 all saints 
 walsh elliot (vice chancellors office) 
-hint: the vice chancellor is all knowing. Go there to know how to get back to the present.
-Abbos alley connects all locations together and following your talk with the vice 
-chancellor head to johnson to find weapons. 
+hint: the vice chancellor is all knowing. Go there first to know how to get back to the present.
+Abbos alley only connects walsh elliot. Following your talk with the vice 
+chancellor head to johnson to find weapons and make sure to collect the holy water needed before going 
+to the forest where the final boss is. 
