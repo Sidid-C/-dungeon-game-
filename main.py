@@ -59,10 +59,11 @@ class Weapon:
     
 
 class Room: 
-    def __init__(self, name, description, enter_sound=None, follow_up=None): 
+    def __init__(self, name, description, enter_sound=None, music=None, follow_up=None): 
         self.name = name 
         self.description = description 
         self.enter_sound = enter_sound 
+        self.music = music 
         self.neighbors = {} 
         self.follow_up = follow_up or [] 
         self.interactive = None  
@@ -94,36 +95,33 @@ class Game:
         self.pending = []
         self.best_weapon_damage = 1
         self.game_over = False 
-        self.sounds = { 
-            'go past': pygame.mixer.Sound(ASSET_DIR / 'Frat House.ogg'),
-            'go abbos alley': pygame.mixer.Sound(ASSET_DIR / 'Abbos Alley.ogg'),
-            'go all saints': pygame.mixer.Sound(ASSET_DIR / 'All Saints.ogg'),
-            'go johnson hall': pygame.mixer.Sound(ASSET_DIR / 'Johnson hall.ogg'),
-            'go forest': pygame.mixer.Sound(ASSET_DIR / 'Tampoline Soundtrack.ogg'), 
-            'go walsh elliot' 'go walsh elliot office': pygame.mixer.Sound(ASSET_DIR / 'Walsh-Ellot (Vice chancellor).ogg')
-        } 
+        self.current_music = None
+        self.music_started = False
+        self.monster_sound = [
+            pygame.mixer.Sound(ASSET_DIR / 'Creepy Sound 1.ogg'),
+            pygame.mixer.Sound(ASSET_DIR / 'Creepy Sound 3.ogg')
+        ]
+        
 
         
         
         ATO = Room('Frat house', story('Monologue.txt'))
-        past_ATO = Room('past frat house', story('PastATO.txt'), enter_sound= 'go past', 
+        past_ATO = Room('past frat house', story('PastATO.txt'), music= 'Frat House.ogg', 
                         follow_up= [story('PastATOfollowup.txt')])
-        Abbos_alley = Room('abbos alley', story('abbos.txt'), enter_sound= 'go abbos alley') 
-        All_saints_Church = Room('all saints', story('allsaints.txt'), enter_sound= 'go all saints') 
-        Johnson = Room('johnson hall', story('johnson.txt'), enter_sound= 'go johnson hall',
+        Abbos_alley = Room('abbos alley', story('abbos.txt'), music= 'Abbos Alley.ogg') 
+        All_saints_Church = Room('all saints', story('allsaints.txt'), music= 'All Saints.ogg') 
+        Johnson = Room('johnson hall', story('johnson.txt'), music= 'Johnson hall.ogg',
                        follow_up= [story ('johnsonFollowup.txt')]) 
-        Walsh_elliot = Room('walsh elliot', story('Walshelliot.txt'), enter_sound= 'go walsh elliot',
+        Walsh_elliot = Room('walsh elliot', story('Walshelliot.txt'), music='Walsh-Ellot (Vice chancellor).ogg',
                             follow_up= [story('WalshelliotFollowup.txt')]) 
-        Walsh_elliot_office = Room('vice chancellors office', story('office.txt'), enter_sound= 'go walsh elliot office')
-        The_forest = Room('the forest', story('theforest.txt'))
+        Walsh_elliot_office = Room('vice chancellors office', story('office.txt'), music= 'Walsh-Ellot (Vice chancellor).ogg')
+        The_forest = Room('the forest', story('theforest.txt'), music= 'Tampoline Soundtrack.ogg')
  
         ATO.add_neighbor('past', past_ATO)
         past_ATO.add_neighbor('abbos alley', Abbos_alley) 
-        Abbos_alley.add_neighbor('all saints', All_saints_Church) 
-        Abbos_alley.add_neighbor('johnson hall', Johnson)
         Abbos_alley.add_neighbor('walsh elliot', Walsh_elliot)
-        Abbos_alley.add_neighbor('the forest', The_forest) 
         Walsh_elliot.add_neighbor('vice chancellors office', Walsh_elliot_office)
+        Walsh_elliot_office.add_neighbor('johnson', Johnson)
         Walsh_elliot_office.add_neighbor('abbos alley', Abbos_alley)
         Johnson.add_neighbor('all saints', All_saints_Church)
         All_saints_Church.add_neighbor('the forest', The_forest)
@@ -148,7 +146,12 @@ class Game:
         self.say('Welcome this is ATO.')
         self.say('''To get started enter start''')
 
+    def update_monster_sounds(self):
+        pygame.mixer.stop()
 
+        if self.current_room.monster is not None: 
+            for sound in self.monster_sound: 
+                sound.play(loops= -1)
     
 
     def say(self, message):
@@ -175,13 +178,17 @@ class Game:
             self.say(f'There is no {name} here')
 
     def update_music(self):
-        """Change tracks only when necessary, never once per frame."""
-        filename = self.current_room.music or self.default_music
+        filename = self.current_room.music 
         if not self.music_started or filename == self.current_music:
             return
+        pygame.mixer.music.stop()
         pygame.mixer.music.load(str(ASSET_DIR / filename))
         pygame.mixer.music.play(-1) 
         self.current_music = filename
+
+    def start_music(self):
+        self.music_started = True
+        self.update_music()
     
     def map(self): 
         self.say(f'Your current location is: {self.current_room.name}')
@@ -201,6 +208,8 @@ class Game:
 
     def start(self):
         self.started = True 
+        self.start_music()
+        self.update_monster_sounds()
         self.say(self.current_room.description)
         
     def go(self, destination):
@@ -211,6 +220,8 @@ class Game:
 
         self.current_room = destination
         self.ran = False
+        self.update_music()
+        self.update_monster_sounds()
         if self.current_room.enter_sound is not None:
                     self.play_sound(self.current_room.enter_sound)
         self.announce_room()
@@ -230,8 +241,10 @@ class Game:
                 self.say('You successfully exorsized it!')
                 self.say(monster.description)
                 self.current_room.monster = None
+                self.update_monster_sounds()
             elif self.ran == True: 
                 self.current_room.monster = None
+                self.update_monster_sounds()
             else: 
                  self.say('Your attack did nothing.')
                  self.say(f'The {monster.name} violently ate you in one gulp')
@@ -244,7 +257,8 @@ class Game:
          monster = self.current_room.monster 
          if monster is not None: 
               self.say(monster.description)
-              self.ran = True 
+              self.ran = True
+              self.update_monster_sounds
               
 
    
@@ -298,6 +312,13 @@ class Game:
              if self.score >= 100 and not self.pending:
                 self.say('You made it home CONGRATULATIONS!!! And you will never visit the ATO house again.')
                 self.game_over = True
+             elif self.current_room == 'the forest' and self.score < 100 and not self.pending:
+                 self.say('''You did not make it home. The ghosts will slowly haunt you
+                 untill you die of craziness. Restart the game and you must go to abbos alley
+                 walsh elliot, the office in walsh elliot, johnson, all saints, then the 
+                 forest in order to get everything and win. Better luck next time''')
+             else: 
+                 ()
              return  
         self.say(f'> {line}')
         words = line.lower().split() 
@@ -390,7 +411,7 @@ def menu_commands(game):
     choices = [('Look around', 'look')]
     if room.monster:
       choices.append((f'Attack {room.monster.name}', f'attack {room.monster.name}'))
-    if not game.ran:
+    if room.name == 'walsh elliot' and not game.ran:
       choices.append(('run', 'run'))
         
     if not room.monster or game.ran:
