@@ -1,19 +1,22 @@
 # Sidi Cisse 
 # add a use input and figure out how to implement additional text add to existing text if necessary
+# change the story make sure they cannot get to the trampoline until they make it to johnson and walsh elliot
 
 import asyncio               
 from pathlib import Path
 import pygame
 
 WIDTH, HEIGHT = 900, 600
-GAME_TITLE = "GHOST"
-INTERFACE = "menu" 
+GAME_TITLE = 'GHOST'
+INTERFACE = 'menu' 
+TITLE_IMAGE = 'title_image.png'
+GAME_IMAGE = 'images.jpg'
 BACKGROUND = (30, 45, 55)
 PANEL_COLOR = (39, 49, 65)
-TEXT_COLOR = (235, 235, 240)
+TEXT_COLOR = (200, 120, 240)
 MUTED_COLOR = (185, 195, 205)
 ACCENT_COLOR = (244, 197, 102)
-TITLE_SIZE = 38
+TITLE_SIZE = 50
 TEXT_SIZE = 22
 BASE_DIR = Path(__file__).parent
 ASSET_DIR = BASE_DIR / "Sound_Ghost" 
@@ -92,7 +95,12 @@ class Game:
         self.best_weapon_damage = 1
         self.game_over = False 
         self.sounds = { 
-            'go past': pygame.mixer.Sound(ASSET_DIR / 'frat-001.ogg'),
+            'go past': pygame.mixer.Sound(ASSET_DIR / 'Frat House.ogg'),
+            'go abbos alley': pygame.mixer.Sound(ASSET_DIR / 'Abbos Alley.ogg'),
+            'go all saints': pygame.mixer.Sound(ASSET_DIR / 'All Saints.ogg'),
+            'go johnson hall': pygame.mixer.Sound(ASSET_DIR / 'Johnson hall.ogg'),
+            'go forest': pygame.mixer.Sound(ASSET_DIR / 'Tampoline Soundtrack.ogg'), 
+            'go walsh elliot' 'go walsh elliot office': pygame.mixer.Sound(ASSET_DIR / 'Walsh-Ellot (Vice chancellor).ogg')
         } 
 
         
@@ -100,17 +108,16 @@ class Game:
         ATO = Room('Frat house', story('Monologue.txt'))
         past_ATO = Room('past frat house', story('PastATO.txt'), enter_sound= 'go past', 
                         follow_up= [story('PastATOfollowup.txt')])
-        Abbos_alley = Room('abbos alley', story('abbos.txt')) 
-        All_saints_Church = Room('all saints', story('allsaints.txt')) 
-        Johnson = Room('johnson hall', story('johnson.txt'), 
+        Abbos_alley = Room('abbos alley', story('abbos.txt'), enter_sound= 'go abbos alley') 
+        All_saints_Church = Room('all saints', story('allsaints.txt'), enter_sound= 'go all saints') 
+        Johnson = Room('johnson hall', story('johnson.txt'), enter_sound= 'go johnson hall',
                        follow_up= [story ('johnsonFollowup.txt')]) 
-        Walsh_elliot = Room('walsh elliot', story('Walshelliot.txt'), 
+        Walsh_elliot = Room('walsh elliot', story('Walshelliot.txt'), enter_sound= 'go walsh elliot',
                             follow_up= [story('WalshelliotFollowup.txt')]) 
-        Walsh_elliot_office = Room('vice chancellors office', story('office.txt'))
+        Walsh_elliot_office = Room('vice chancellors office', story('office.txt'), enter_sound= 'go walsh elliot office')
         The_forest = Room('the forest', story('theforest.txt'))
  
         ATO.add_neighbor('past', past_ATO)
-        past_ATO.add_neighbor('future ato', ATO)
         past_ATO.add_neighbor('abbos alley', Abbos_alley) 
         Abbos_alley.add_neighbor('all saints', All_saints_Church) 
         Abbos_alley.add_neighbor('johnson hall', Johnson)
@@ -166,7 +173,15 @@ class Game:
                 self.game_over = True
          else:
             self.say(f'There is no {name} here')
-            
+
+    def update_music(self):
+        """Change tracks only when necessary, never once per frame."""
+        filename = self.current_room.music or self.default_music
+        if not self.music_started or filename == self.current_music:
+            return
+        pygame.mixer.music.load(str(ASSET_DIR / filename))
+        pygame.mixer.music.play(-1) 
+        self.current_music = filename
     
     def map(self): 
         self.say(f'Your current location is: {self.current_room.name}')
@@ -281,7 +296,7 @@ class Game:
         if self.pending: 
              self.say(self.pending.pop(0))
              if self.score >= 100 and not self.pending:
-                self.say('You made it home CONGRADULATIONS!!! And you will never visit the ATO house again.')
+                self.say('You made it home CONGRATULATIONS!!! And you will never visit the ATO house again.')
                 self.game_over = True
              return  
         self.say(f'> {line}')
@@ -315,10 +330,30 @@ class Game:
         else:
             self.say('I dont understand that. Enter help for more information. ') 
             return 
-        
-def draw_game(screen, title_font, text_font, game, selected):
-    screen.fill(BACKGROUND)
-    screen.blit(title_font.render(GAME_TITLE, True, ACCENT_COLOR), (20, 30))
+
+def draw_title(screen, title_font, text_font, title_image):
+    if title_image is None:
+           screen.fill(BACKGROUND)
+    else:
+        screen.blit(title_image, (0, 0))
+    title = title_font.render(GAME_TITLE, True, ACCENT_COLOR)
+    prompt = text_font.render("Press Enter to begin", True, TEXT_COLOR)
+    screen.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 35)))
+    screen.blit(prompt, prompt.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 25)))
+
+def load_background(filename):
+    if filename is None:
+        return None
+    image = pygame.image.load(str(ASSET_DIR / filename)).convert()
+    return pygame.transform.smoothscale(image, (WIDTH, HEIGHT))
+
+def draw_game(screen, title_font, text_font, game, selected, game_image):
+    if game_image is None:
+        screen.fill(BACKGROUND)
+    else:
+        screen.blit(game_image, (0, 0))
+        screen.blit(title_font.render(GAME_TITLE, True, ACCENT_COLOR), (30, 16))
+    
 
     choices = menu_commands(game) if INTERFACE == "menu" else []
     line_height = text_font.get_linesize() + 3
@@ -376,14 +411,6 @@ def menu_commands(game):
     choices.append(('Help', 'help'))
     return choices
 
-
-def draw_title(screen, title_font, text_font):
-    screen.fill(BACKGROUND)
-    title = title_font.render(GAME_TITLE, True, ACCENT_COLOR)
-    prompt = text_font.render("Press Enter to begin", True, TEXT_COLOR)
-    screen.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 35)))
-    screen.blit(prompt, prompt.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 25)))
-
 def wrap_text(text, font, max_width): 
         if not text:
                 return [""]
@@ -404,11 +431,15 @@ def wrap_text(text, font, max_width):
 async def main(): 
     pygame.init() 
     pygame.mixer.init() 
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    title_image = load_background(TITLE_IMAGE)
+    game_image = load_background(GAME_IMAGE)
+    pygame.display.set_caption(GAME_TITLE)
 
 
     game = Game()
     running = True 
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen_name = "title"
     font = pygame.font.Font(None, 32)
     small_font = pygame.font.Font(None, 22)
     selected = 0
@@ -422,6 +453,9 @@ async def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                elif screen_name == "title":
+                    if event.key == pygame.K_RETURN:
+                        screen_name = "game"
                 elif INTERFACE == "menu":
                     if event.key == pygame.K_UP and choices:
                         selected = (selected - 1) % len(choices)
@@ -440,7 +474,10 @@ async def main():
                         game.current_input = game.current_input[:-1]
                     elif event.unicode and event.unicode.isprintable():
                         game.current_input += event.unicode 
-        draw_game(screen, font, small_font, game, selected)
+        if screen_name == "title":
+            draw_title(screen, font, small_font, title_image)
+        else:
+            draw_game(screen, font, small_font, game, selected, game_image)
         pygame.display.flip()       
         await asyncio.sleep(0) 
        
